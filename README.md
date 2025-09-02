@@ -217,10 +217,32 @@ The app is pre-configured to work with:
 No additional configuration needed - the correct backend URL is automatically selected based on build mode.
 
 ### **Hosting Options**
-- **Vercel** - Zero-config deployment
-- **Netlify** - Static site hosting
+- **Vercel** - Zero-config deployment (includes `vercel.json` for SPA routing)
+- **Netlify** - Static site hosting (requires `_redirects` file)
 - **GitHub Pages** - Free hosting for open source
 - **AWS S3** - Scalable static hosting
+
+### **SPA Routing Configuration**
+For Single Page Application routing to work on static hosts:
+
+**Vercel** (included):
+```json
+// vercel.json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+```
+
+**Netlify** (if needed):
+```
+# _redirects file
+/*    /index.html   200
+```
 
 ### **Environment Variables**
 The following environment files are pre-configured:
