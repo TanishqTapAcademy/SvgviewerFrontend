@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { SvgItem } from '../types/svg';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Create axios instance with default config
 const api = axios.create({
