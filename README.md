@@ -43,11 +43,19 @@ A beautiful, modern React frontend for the SVG Holder application with stunning 
    ```
 
 3. **Environment Configuration**
-   Ensure your backend API is running on `http://localhost:3001`
    
-   If using a different backend URL, update `src/services/svgStorage.ts`:
-   ```typescript
-   const API_BASE_URL = 'http://your-backend-url:port/api';
+   The app uses environment-specific configuration files:
+   
+   **For Development (default):**
+   ```bash
+   # .env.development (already created)
+   VITE_API_BASE_URL=http://localhost:3001/api
+   ```
+   
+   **For Production:**
+   ```bash
+   # .env.production (already created)
+   VITE_API_BASE_URL=https://svgviewerbackend.onrender.com/api
    ```
 
 4. **Start development server**
@@ -106,10 +114,11 @@ src/
 ## 🚀 Available Scripts
 
 ```bash
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run preview  # Preview production build
-npm run lint     # Run ESLint
+npm run dev                # Start development server (uses .env.development)
+npm run build              # Build for production (uses .env.production)
+npm run build:production   # Explicit production build with production backend
+npm run preview            # Preview production build locally
+npm run lint               # Run ESLint
 ```
 
 ## 🔧 Configuration
@@ -120,7 +129,9 @@ npm run lint     # Run ESLint
 - **Custom color palette** - Purple, blue, and cyan gradients
 
 ### API Configuration
-- **Base URL** - Configurable backend API endpoint
+- **Environment-based URLs** - Automatic backend switching
+  - Development: `http://localhost:3001/api`
+  - Production: `https://svgviewerbackend.onrender.com/api`
 - **CORS support** - Cross-origin request handling
 - **Error handling** - User-friendly error messages
 
@@ -186,7 +197,10 @@ npm run lint     # Run ESLint
 
 ### **Build Process**
 ```bash
-# Create production build
+# Create production build (automatically uses production backend)
+npm run build:production
+
+# Alternative: Standard build (also uses production environment)
 npm run build
 
 # Preview build locally
@@ -195,19 +209,57 @@ npm run preview
 # Deploy dist/ folder to your hosting service
 ```
 
+### **Backend Configuration**
+The app is pre-configured to work with:
+- **Production Backend**: `https://svgviewerbackend.onrender.com/api`
+- **Development Backend**: `http://localhost:3001/api`
+
+No additional configuration needed - the correct backend URL is automatically selected based on build mode.
+
 ### **Hosting Options**
-- **Vercel** - Zero-config deployment
-- **Netlify** - Static site hosting
+- **Vercel** - Zero-config deployment (includes `vercel.json` for SPA routing)
+- **Netlify** - Static site hosting (requires `_redirects` file)
 - **GitHub Pages** - Free hosting for open source
 - **AWS S3** - Scalable static hosting
 
-### **Environment Variables**
-```bash
-# Production API URL
-VITE_API_BASE_URL=https://your-backend-api.com/api
+### **SPA Routing Configuration**
+For Single Page Application routing to work on static hosts:
 
-# Build optimization
-VITE_BUILD_OPTIMIZATION=true
+**Vercel** (included):
+```json
+// vercel.json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+```
+
+**Netlify** (if needed):
+```
+# _redirects file
+/*    /index.html   200
+```
+
+### **Environment Variables**
+The following environment files are pre-configured:
+
+```bash
+# .env.development (for local development)
+VITE_API_BASE_URL=http://localhost:3001/api
+
+# .env.production (for production builds)
+VITE_API_BASE_URL=https://svgviewerbackend.onrender.com/api
+```
+
+**Custom Backend URL:**
+If you need to use a different backend, update the respective `.env` file:
+```bash
+# For production
+echo "VITE_API_BASE_URL=https://your-custom-backend.com/api" > .env.production
 ```
 
 ## 🐛 Troubleshooting
@@ -231,9 +283,14 @@ npm run dev
 ```
 
 #### 3. **API Connection Issues**
-- Verify backend is running
-- Check CORS configuration
-- Ensure correct API base URL
+- **Development**: Verify local backend is running on `http://localhost:3001`
+- **Production**: Check if `https://svgviewerbackend.onrender.com` is accessible
+- Verify CORS configuration on backend
+- Check environment file configuration:
+  ```bash
+  cat .env.development  # For dev environment
+  cat .env.production   # For production environment
+  ```
 
 #### 4. **Port Conflicts**
 ```bash
