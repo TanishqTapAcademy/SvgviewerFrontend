@@ -7,6 +7,7 @@ const SvgViewer = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSvg, setSelectedSvg] = useState<SvgItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -14,6 +15,12 @@ const SvgViewer = () => {
   useEffect(() => {
     loadSvgs();
   }, []);
+
+  useEffect(() => {
+    if (selectedCategory) {
+      handleSearch();
+    }
+  }, [selectedCategory]);
 
   const loadSvgs = async () => {
     try {
@@ -29,14 +36,34 @@ const SvgViewer = () => {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
+    if (!searchQuery.trim() && !selectedCategory) {
       loadSvgs();
       return;
     }
 
     try {
       setLoading(true);
-      const results = await SvgApiService.searchSvgs(searchQuery.trim());
+      let results: SvgItem[] = [];
+      if (selectedCategory && !searchQuery.trim()) {
+        // Filter by category only
+        const allSvgs = await SvgApiService.getAllSvgs();
+        results = allSvgs.filter(svg => 
+          svg.category && formatCategories(svg.category).some(cat => 
+            cat.toLowerCase().includes(selectedCategory.toLowerCase())
+          )
+        );
+      } else if (searchQuery.trim()) {
+        // Search by query (which now includes category)
+        results = await SvgApiService.searchSvgs(searchQuery.trim());
+        // Additional category filter if selected
+        if (selectedCategory) {
+          results = results.filter(svg => 
+            svg.category && formatCategories(svg.category).some(cat => 
+              cat.toLowerCase().includes(selectedCategory.toLowerCase())
+            )
+          );
+        }
+      }
       setSvgs(results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
@@ -92,6 +119,11 @@ const SvgViewer = () => {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
   };
 
+  const formatCategories = (categories: string) => {
+    if (!categories) return [];
+    return categories.split(',').map(cat => cat.trim()).filter(cat => cat.length > 0);
+  };
+
   const groupSvgsByDate = (svgs: SvgItem[]) => {
     const groups: { [key: string]: SvgItem[] } = {};
     
@@ -145,6 +177,16 @@ const SvgViewer = () => {
     }
   };
 
+  const getAllCategories = () => {
+    const categories = new Set<string>();
+    svgs.forEach(svg => {
+      if (svg.category) {
+        formatCategories(svg.category).forEach(cat => categories.add(cat));
+      }
+    });
+    return Array.from(categories).sort();
+  };
+
   if (loading && svgs.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50 flex items-center justify-center">
@@ -179,9 +221,16 @@ const SvgViewer = () => {
           <h1 className="text-5xl md:text-6xl font-black mb-4 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">
             SVG Collection
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-4">
             Browse, search, and manage your uploaded SVG files with style
           </p>
+          {!loading && (
+            <div className="inline-block px-4 py-2 bg-white/60 backdrop-blur-sm border border-purple-200/50 rounded-full">
+              <span className="text-gray-700 font-medium">
+                Total: <span className="text-purple-600 font-bold">{svgs.length}</span> SVG{svgs.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Search Bar */}
@@ -200,7 +249,7 @@ const SvgViewer = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="Search SVGs by name or description..."
+                    placeholder="Search SVGs by name, description, or category..."
                     className="w-full pl-12 pr-4 py-4 bg-white/70 backdrop-blur-sm border border-purple-200/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-700 placeholder-gray-500 shadow-lg transition-all duration-300 hover:bg-white/80"
                   />
                 </div>
@@ -210,10 +259,11 @@ const SvgViewer = () => {
                 >
                   Search
                 </button>
-                {searchQuery && (
+                {(searchQuery || selectedCategory) && (
                   <button
                     onClick={() => {
                       setSearchQuery('');
+                      setSelectedCategory('');
                       loadSvgs();
                     }}
                     className="px-6 py-4 bg-white/70 backdrop-blur-sm border border-gray-200 text-gray-600 rounded-2xl hover:bg-white/80 hover:text-gray-800 transition-all duration-300 shadow-lg"
@@ -223,6 +273,53 @@ const SvgViewer = () => {
                 )}
               </div>
             </div>
+            
+            {/* Category Filter */}
+            <div className="mt-4">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-4 py-3 bg-white/70 backdrop-blur-sm border border-purple-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-700 shadow-lg transition-all duration-300 hover:bg-white/80"
+              >
+                <option value="">All Categories</option>
+                {getAllCategories().length > 0 ? (
+                  getAllCategories().map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>No categories available yet</option>
+                )}
+              </select>
+              {getAllCategories().length === 0 && (
+                <p className="mt-2 text-sm text-gray-500 text-center">
+                  Upload SVGs with categories to enable filtering
+                </p>
+              )}
+            </div>
+            
+            {/* Active Filters Display */}
+            {(searchQuery || selectedCategory) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {searchQuery && (
+                  <span className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full font-medium">
+                    <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    "{searchQuery}"
+                  </span>
+                )}
+                {selectedCategory && (
+                  <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-medium">
+                    <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    {selectedCategory}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -262,9 +359,9 @@ const SvgViewer = () => {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-800 mb-3">No SVGs found</h3>
                 <p className="text-gray-600 mb-6">
-                  {searchQuery ? 'Try a different search term or browse all SVGs' : 'Start building your collection by uploading your first SVG'}
+                  {searchQuery || selectedCategory ? 'Try adjusting your search terms or filters' : 'Start building your collection by uploading your first SVG'}
                 </p>
-                {!searchQuery && (
+                {!searchQuery && !selectedCategory && (
                   <button
                     onClick={() => window.location.href = '/svg-importer'}
                     className="px-6 py-3 bg-gradient-to-r from-purple-500 to-cyan-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-cyan-600 transform hover:scale-105 transition-all duration-300 shadow-lg"
@@ -277,6 +374,23 @@ const SvgViewer = () => {
           </div>
         ) : (
           <div className="space-y-12">
+            {/* Search Results Summary */}
+            {(searchQuery || selectedCategory) && (
+              <div className="text-center">
+                <div className="inline-block px-6 py-3 bg-white/70 backdrop-blur-sm border border-purple-200/50 rounded-2xl shadow-lg">
+                  <p className="text-gray-700 font-medium">
+                    Found <span className="text-purple-600 font-bold">{svgs.length}</span> SVG{svgs.length !== 1 ? 's' : ''}
+                    {searchQuery && (
+                      <span> matching "<span className="text-purple-600 font-semibold">{searchQuery}</span>"</span>
+                    )}
+                    {selectedCategory && (
+                      <span> in category "<span className="text-green-600 font-semibold">{selectedCategory}</span>"</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
+            
             {groupSvgsByDate(svgs).map((group) => (
               <div key={group.dateKey} className="space-y-6">
                 {/* Date Header */}
@@ -336,6 +450,23 @@ const SvgViewer = () => {
                       </svg>
                       {formatFileSize(svg.fileSize)}
                     </div>
+                    {svg.category && (
+                      <div className="flex items-center">
+                        <svg className="w-3 h-3 mr-2 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        <div className="flex flex-wrap gap-1">
+                          {formatCategories(svg.category).map((cat, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium"
+                            >
+                              {cat}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                                           {/* Actions */}
@@ -432,15 +563,32 @@ const SvgViewer = () => {
                 </div>
 
                 {/* SVG Details */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-700">Uploaded:</span>
-                    <span className="ml-2 text-gray-600">{formatDate(selectedSvg.uploadDate)}</span>
+                <div className="space-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="font-medium text-gray-700">Uploaded:</span>
+                      <span className="ml-2 text-gray-600">{formatDate(selectedSvg.uploadDate)}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">File Size:</span>
+                      <span className="ml-2 text-gray-600">{formatFileSize(selectedSvg.fileSize)}</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-700">File Size:</span>
-                    <span className="ml-2 text-gray-600">{formatFileSize(selectedSvg.fileSize)}</span>
-                  </div>
+                  {selectedSvg.category && (
+                    <div>
+                      <span className="font-medium text-gray-700">Category:</span>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {formatCategories(selectedSvg.category).map((cat, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-medium"
+                          >
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}

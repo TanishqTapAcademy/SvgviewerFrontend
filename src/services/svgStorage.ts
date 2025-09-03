@@ -20,11 +20,12 @@ export class SvgApiService {
     }
   }
 
-  static async saveSvg(name: string, description: string, file: File): Promise<SvgItem> {
+  static async saveSvg(name: string, description: string, file: File, category: string): Promise<SvgItem> {
     try {
       const formData = new FormData();
       formData.append('name', name);
       formData.append('description', description);
+      formData.append('category', category);
       formData.append('svgFile', file);
 
       const response = await api.post('/svgs', formData, {
@@ -63,11 +64,12 @@ export class SvgApiService {
     }
   }
 
-  static async updateSvg(id: string, name: string, description: string): Promise<SvgItem | null> {
+  static async updateSvg(id: string, name: string, description: string, category: string): Promise<SvgItem | null> {
     try {
       const response = await api.put(`/svgs/${id}`, {
         name,
         description,
+        category,
       });
       return this.transformSvgFromApi(response.data.data);
     } catch (error) {
@@ -102,6 +104,7 @@ export class SvgApiService {
       id: apiSvg._id,
       name: apiSvg.name,
       description: apiSvg.description,
+      category: apiSvg.category || '',
       content: apiSvg.content,
       uploadDate: apiSvg.createdAt,
       fileSize: apiSvg.fileSize,
