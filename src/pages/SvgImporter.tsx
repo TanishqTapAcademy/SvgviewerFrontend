@@ -5,6 +5,7 @@ const SvgImporter = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    category: '',
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -71,7 +72,7 @@ const SvgImporter = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim() || !formData.description.trim() || !selectedFile) {
+    if (!formData.name.trim() || !formData.description.trim() || !formData.category.trim() || !selectedFile) {
       setMessage({ type: 'error', text: 'Please fill in all fields and select a file' });
       return;
     }
@@ -80,11 +81,11 @@ const SvgImporter = () => {
     setMessage(null);
 
     try {
-      await SvgApiService.saveSvg(formData.name.trim(), formData.description.trim(), selectedFile);
+      await SvgApiService.saveSvg(formData.name.trim(), formData.description.trim(), selectedFile, formData.category.trim());
       setMessage({ type: 'success', text: 'SVG uploaded successfully!' });
       
       // Reset form
-      setFormData({ name: '', description: '' });
+      setFormData({ name: '', description: '', category: '' });
       setSelectedFile(null);
       setPreviewContent(null);
       if (fileInputRef.current) {
@@ -242,6 +243,26 @@ const SvgImporter = () => {
             />
           </div>
 
+          {/* Category Input */}
+          <div className="space-y-3">
+            <label htmlFor="category" className="block text-lg font-semibold text-gray-800">
+              🏷️ Category *
+            </label>
+            <input
+              type="text"
+              id="category"
+              name="category"
+              value={formData.category}
+              onChange={handleInputChange}
+              className="w-full px-6 py-4 bg-white/70 border border-purple-200/50 rounded-2xl shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-700 placeholder-gray-500 transition-all duration-300 hover:bg-white/80"
+              placeholder="Enter categories separated by commas (e.g., icons, logos, illustrations)"
+              required
+            />
+            <p className="text-sm text-gray-500 ml-2">
+              💡 Separate multiple categories with commas for better organization
+            </p>
+          </div>
+
           {/* Preview */}
           {previewContent && (
             <div className="space-y-4">
@@ -296,9 +317,9 @@ const SvgImporter = () => {
           <div className="flex justify-center pt-4">
             <button
               type="submit"
-              disabled={loading || !selectedFile || !formData.name.trim() || !formData.description.trim()}
+              disabled={loading || !selectedFile || !formData.name.trim() || !formData.description.trim() || !formData.category.trim()}
               className={`px-12 py-4 rounded-2xl text-white font-bold text-lg transition-all duration-300 transform ${
-                loading || !selectedFile || !formData.name.trim() || !formData.description.trim()
+                loading || !selectedFile || !formData.name.trim() || !formData.description.trim() || !formData.category.trim()
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 hover:from-purple-600 hover:via-blue-600 hover:to-cyan-600 hover:scale-105 shadow-2xl hover:shadow-purple-500/25'
               }`}
